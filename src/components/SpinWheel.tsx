@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Prize } from '@/types';
+import { getAudioManager } from '@/utils/audioUtils';
 
 interface SpinWheelProps {
   prizes: Prize[];
@@ -12,6 +13,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<SVGSVGElement>(null);
+  const audioManager = useRef(getAudioManager());
 
   const colors = [
     '#CD0303', '#CD0303', '#CD0303', '#CD0303', '#CD0303',
@@ -87,6 +89,9 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
 
     setIsSpinning(true);
 
+    // Start playing the roulette spin sound
+    audioManager.current.playRouletteSpinSound();
+
     // Generate random rotation (minimum 5 full rotations + random amount)
     const minRotation = 3600; // 5 full rotations
     const randomRotation = Math.random() * 360;
@@ -105,6 +110,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
 
     // Trigger animation and callback
     setTimeout(() => {
+      // Stop the spinning sound when the wheel stops
+      audioManager.current.stopRouletteSpinSound();
       setIsSpinning(false);
       onWin(winningPrize);
     }, 4000);

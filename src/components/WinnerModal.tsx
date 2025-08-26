@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Prize } from '@/types';
 import JSConfetti from 'js-confetti';
+import { getAudioManager } from '@/utils/audioUtils';
 
 interface WinnerModalProps {
   winner: Prize | null;
@@ -12,6 +13,7 @@ interface WinnerModalProps {
 
 const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose }) => {
   const jsConfetti = useRef<JSConfetti | null>(null);
+  const audioManager = useRef(getAudioManager());
 
   useEffect(() => {
     // Initialize JSConfetti only on client side
@@ -22,6 +24,9 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose }) =>
 
   useEffect(() => {
     if (isOpen && winner && jsConfetti.current) {
+      // Play the winner sound immediately when modal opens
+      audioManager.current.playWinnerSound();
+      
       // First confetti burst
       jsConfetti.current.addConfetti({
         confettiRadius: 10,

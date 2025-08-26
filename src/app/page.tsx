@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import SpinWheel from '@/components/SpinWheel';
 import PrizeManager from '@/components/PrizeManager';
 import WinnerModal from '@/components/WinnerModal';
+import AudioControls from '@/components/AudioControls';
 import { Prize } from '@/types';
 
 export default function Home() {
@@ -44,13 +45,14 @@ export default function Home() {
       </div>
 
       {/* Controls - Fixed at top right */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
         <button
           onClick={() => setShowPrizeManager(!showPrizeManager)}
           className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-bold py-3 px-4 rounded-lg shadow-2xl hover:from-yellow-400 hover:to-yellow-500 transition-all transform hover:scale-105 text-sm border border-yellow-400"
         >
           {showPrizeManager ? '✕' : '⚙️'}
         </button>
+        <AudioControls />
       </div>
 
       {/* Prize Manager - Overlay */}
