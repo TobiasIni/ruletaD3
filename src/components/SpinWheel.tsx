@@ -3,19 +3,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Prize } from '@/types';
 import { getAudioManager } from '@/utils/audioUtils';
+import { spinRoulette, findPrizeByApiResponse } from '@/utils/api';
 
 interface SpinWheelProps {
   prizes: Prize[];
-  onWin: (prize: Prize) => void;
+  onWin: (prize: Prize, isPositive?: boolean) => void;
+  colors?: string[];
+  logo?: string;
 }
 
-const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
+const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors, logo }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<SVGSVGElement>(null);
   const audioManager = useRef(getAudioManager());
 
-  const colors = [
+  // Use provided colors or fallback to default colors
+  const colors = propColors || [
     '#CD0303', '#CD0303', '#CD0303', '#CD0303', '#CD0303',
     '#CD0303', '#2F4F4F', '#8B0000', '#006400', '#CD0303',
     '#CD0303', '#8B008B', '#FF1493', '#32CD32', '#FF8C00'
@@ -23,6 +27,54 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
 
   // Calculate segment angle
   const segmentAngle = 360 / prizes.length;
+
+  // Function to verify which segment is at the pointer after rotation
+  const verifyLandingSegment = (finalRotation: number): number => {
+    const normalizedRotation = ((finalRotation % 360) + 360) % 360;
+    
+    // CRITICAL: The pointer is at the TOP of the wheel container
+    // In standard math coordinates: 270° = top, 0° = right, 90° = bottom, 180° = left
+    // The wheel uses standard math coordinates for segment positioning (Math.cos/sin)
+    const pointerAngle = 270; // Top position in math coordinates
+    
+    let closestIndex = 0;
+    let closestDistance = Infinity;
+    
+    for (let i = 0; i < prizes.length; i++) {
+      // Segment center in math coordinates (0° = right, 90° = bottom, etc.)
+      const segmentCenterAngle = (i * segmentAngle) + (segmentAngle / 2);
+      
+      // After rotating the wheel clockwise by normalizedRotation, 
+      // the segment center moves to a new position
+      let rotatedCenterAngle = (segmentCenterAngle + normalizedRotation) % 360;
+      
+      // Distance from pointer at 270° (top of the wheel)
+      let distance = Math.abs(rotatedCenterAngle - pointerAngle);
+      if (distance > 180) distance = 360 - distance;
+      
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    }
+    
+    console.log('🔍 Landing verification:', {
+      finalRotation,
+      normalizedRotation,
+      pointerAngle,
+      closestIndex,
+      closestDistance,
+      landingPrize: prizes[closestIndex]?.text,
+      segmentCenters: prizes.map((_, i) => {
+        const centerAngle = (i * segmentAngle) + (segmentAngle / 2);
+        const afterRotation = (centerAngle + normalizedRotation) % 360;
+        const distanceFromPointer = Math.min(Math.abs(afterRotation - pointerAngle), 360 - Math.abs(afterRotation - pointerAngle));
+        return { index: i, centerAngle, afterRotation, distanceFromPointer };
+      })
+    });
+    
+    return closestIndex;
+  };
 
   // Create wheel segments
   const createSegment = (prize: Prize, index: number) => {
@@ -54,17 +106,39 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
     const textX = 200 + textRadius * Math.cos(textAngleRad);
     const textY = 200 + textRadius * Math.sin(textAngleRad);
 
+    const segmentColor = prize.color || colors[index % colors.length];
+    
     return (
       <g key={prize.id}>
+        {/* Background segment with gradient */}
         <path
           d={pathData}
-          fill={prize.color || colors[index % colors.length]}
+          fill={`url(#segmentGradient${index})`}
           stroke="#FFD700"
-          strokeWidth="3"
-          style={{
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-          }}
+          strokeWidth="2"
+          filter="url(#segmentShadow)"
         />
+        
+        {/* Inner border for depth */}
+        <path
+          d={pathData}
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.3)"
+          strokeWidth="1"
+          strokeDasharray="0"
+        />
+        
+        {/* Highlight edge */}
+        <path
+          d={pathData}
+          fill="none"
+          stroke="rgba(0, 0, 0, 0.6)"
+          strokeWidth="0.5"
+          strokeDasharray="3,2"
+          opacity="0.7"
+        />
+
+        {/* Clean text without heavy shadows for better readability */}
         <text
           x={textX}
           y={textY}
@@ -76,15 +150,27 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
           dominantBaseline="central"
           transform={`rotate(${textAngle}, ${textX}, ${textY})`}
           stroke="#000000"
-          strokeWidth="0.5"
+          strokeWidth="0.3"
+          style={{
+            filter: 'drop-shadow(0 1px 2px rgb(0, 0, 0))',
+          }}
         >
           {prize.text}
         </text>
+        
+        {/* Segment-specific gradient definition */}
+        <defs>
+          <radialGradient id={`segmentGradient${index}`} cx="50%" cy="30%" r="80%">
+            <stop offset="0%" stopColor={segmentColor} stopOpacity="1"/>
+            <stop offset="60%" stopColor={segmentColor} stopOpacity="0.9"/>
+            <stop offset="100%" stopColor={segmentColor} stopOpacity="0.7"/>
+          </radialGradient>
+        </defs>
       </g>
     );
   };
 
-  const spinWheel = () => {
+  const spinWheel = async () => {
     if (isSpinning || prizes.length === 0) return;
 
     setIsSpinning(true);
@@ -92,41 +178,193 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
     // Start playing the roulette spin sound
     audioManager.current.playRouletteSpinSound();
 
-    // Generate random rotation (minimum 5 full rotations + random amount)
-    const minRotation = 3600; // 5 full rotations
-    const randomRotation = Math.random() * 360;
-    const finalRotation = rotation + minRotation + randomRotation;
+    try {
+      // Call the API to get the winning prize
+      const spinResponse = await spinRoulette(1);
+      
+      if (spinResponse.exito) {
+        console.log('🎲 API Spin Response:', spinResponse);
+        
+        // Find the exact matching prize and its index
+        const { index: winningIndex, prize: winningPrize } = findPrizeByApiResponse(prizes, spinResponse.premio_ganado);
+        
+        // TEMPORARY TEST: Force to specific index to test rotation
+        console.log('🧪 TEST: Original winning index:', winningIndex, 'Prize:', winningPrize.text);
+        console.log('🧪 TEST: API Prize ID:', spinResponse.premio_ganado.id, 'Name:', spinResponse.premio_ganado.nombre);
+        
+        // COORDINATE SYSTEM CLARIFICATION:
+        // - Standard math coordinates: 0° = right, 90° = bottom, 180° = left, 270° = top
+        // - Pointer is at the TOP (270° in math coordinates)
+        // - Segments use standard math coordinates for positioning
+        
+        // Calculate the center angle of the winning segment (in math coordinates)
+        const segmentCenterAngle = (winningIndex * segmentAngle) + (segmentAngle / 2);
+        
+        // CRITICAL: Account for current wheel position
+        // The wheel is currently at `rotation` degrees, so segments are offset by that amount
+        const currentNormalizedRotation = ((rotation % 360) + 360) % 360;
+        
+        // Current position of the winning segment center after existing rotation
+        const currentSegmentPosition = (segmentCenterAngle + currentNormalizedRotation) % 360;
+        
+        // Calculate how much more rotation is needed to align with pointer at 270°
+        let additionalRotation = 270 - currentSegmentPosition;
+        
+        // Normalize to positive rotation for visual effect
+        while (additionalRotation <= 0) {
+          additionalRotation += 360;
+        }
+        
+        // Add multiple full rotations for visual effect (minimum 10 full rotations)
+        const minRotation = 3600; // 10 full rotations
+        // NOTE: Random extra rotation can misalign the final position!
+        // We need to ensure the final position still lands exactly where intended
+        const randomExtraRotation = Math.floor(Math.random() * 10) * 360; // Only full rotations to maintain alignment
+        const finalRotation = rotation + minRotation + additionalRotation + randomExtraRotation;
 
-    // Calculate winning segment - which segment ends up at the pointer (top position)
-    // Segments are drawn with 0° at right (3 o'clock), but pointer is at top (12 o'clock = 270°)
-    // We need to find which segment is at 270° position after rotation
-    const normalizedRotation = (finalRotation % 360);
-    // Adjust for pointer position (top = 270° in standard math coordinates)
-    const pointerPosition = (270 - normalizedRotation + 360) % 360;
-    const winningIndex = Math.floor(pointerPosition / segmentAngle) % prizes.length;
-    const winningPrize = prizes[winningIndex];
+        console.log('🎯 Rotation calculation:', {
+          winningIndex,
+          segmentCenterAngle,
+          currentNormalizedRotation,
+          currentSegmentPosition,
+          additionalRotation,
+          finalRotation: finalRotation % 360,
+          minRotation,
+          randomExtraRotation,
+          totalPrizes: prizes.length,
+          expectedPrize: winningPrize.text,
+          segmentAngleDegrees: segmentAngle,
+          pointerPosition: 270, // degrees
+          calculationCheck: {
+            segmentCenter: segmentCenterAngle,
+            currentSegmentPos: currentSegmentPosition,
+            afterAdditionalRotation: (currentSegmentPosition + additionalRotation) % 360,
+            shouldBe270: Math.abs((currentSegmentPosition + additionalRotation) % 360 - 270) < 1
+          },
+          allSegmentCenters: prizes.map((_, i) => ({
+            index: i,
+            centerAngle: (i * segmentAngle) + (segmentAngle / 2),
+            text: prizes[i]?.text
+          }))
+        });
 
-    setRotation(finalRotation);
+        setRotation(finalRotation);
 
-    // Trigger animation and callback
-    setTimeout(() => {
-      // Stop the spinning sound when the wheel stops
+        // Trigger animation and callback
+        setTimeout(() => {
+          // Verify the landing position
+          const actualLandingIndex = verifyLandingSegment(finalRotation);
+          const actualLandingPrize = prizes[actualLandingIndex];
+          
+          // Check if we landed where we intended
+          if (actualLandingIndex !== winningIndex) {
+            console.warn('⚠️ Landing mismatch!', {
+              intended: winningIndex,
+              actual: actualLandingIndex,
+              intendedPrize: winningPrize.text,
+              actualPrize: actualLandingPrize?.text
+            });
+          } else {
+            console.log('✅ Perfect landing! Prize matches expectation.');
+          }
+          
+          // Stop the spinning sound when the wheel stops
+          audioManager.current.stopRouletteSpinSound();
+          setIsSpinning(false);
+          
+          // Play appropriate sound and show effects based on positive field
+          const isPositive = spinResponse.premio_ganado.positive;
+          console.log('🎵 Playing sound for positive:', isPositive);
+          
+          if (isPositive) {
+            audioManager.current.playWinnerSound();
+          } else {
+            audioManager.current.playLoserSound();
+          }
+          
+          // Always use the API prize data for absolute accuracy
+          const prizeToShow: Prize = {
+            id: spinResponse.premio_ganado.id.toString(),
+            text: spinResponse.premio_ganado.nombre,
+            color: winningPrize.color, // Keep the visual color
+            probability: spinResponse.premio_ganado.probabilidad,
+            positive: isPositive
+          };
+          
+          console.log('🏆 Final prize to show (from API):', prizeToShow);
+          onWin(prizeToShow, isPositive);
+        }, 4000);
+      } else {
+        // Handle API error
+        audioManager.current.stopRouletteSpinSound();
+        setIsSpinning(false);
+        console.error('Spin API returned error:', spinResponse.mensaje);
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error('Error spinning wheel:', error);
       audioManager.current.stopRouletteSpinSound();
       setIsSpinning(false);
-      onWin(winningPrize);
-    }, 4000);
+      
+      // Fallback to random spin if API fails
+      const minRotation = 3600;
+      const randomRotation = Math.random() * 360;
+      const finalRotation = rotation + minRotation + randomRotation;
+      
+      const normalizedRotation = (finalRotation % 360);
+      const pointerPosition = (270 - normalizedRotation + 360) % 360;
+      const winningIndex = Math.floor(pointerPosition / segmentAngle) % prizes.length;
+      const winningPrize = prizes[winningIndex];
+
+      setRotation(finalRotation);
+      
+      setTimeout(() => {
+        setIsSpinning(false);
+        // In fallback mode, assume it's positive and play winner sound
+        audioManager.current.playWinnerSound();
+        onWin(winningPrize, true);
+      }, 4000);
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl">
-      <div className="relative wheel-container flex-1 flex items-center justify-center">
-        {/* Wheel */}
-        <div className="relative">
-          {/* Elegant casino pointer */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-10">
+      {/* Ambient glow effect */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-96 h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
+      </div>
+      
+      <div className={`relative wheel-container flex-1 flex items-center justify-center z-10 ${isSpinning ? 'wheel-spinning' : ''}`}>
+        {/* Enhanced wheel container with floating effect */}
+        <div className="relative transform transition-all duration-300 hover:scale-105"
+          style={{
+            filter: `
+              drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25))
+              drop-shadow(0 0 50px rgba(255, 215, 0, 0.15))
+              ${isSpinning ? 'drop-shadow(0 0 80px rgba(255, 215, 0, 0.4))' : ''}
+            `
+          }}>
+          {/* Ultra elegant casino pointer with advanced shadows */}
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-3 z-20">
             <div className="relative">
-              <div className="w-0 h-0 border-l-[22px] border-r-[22px] border-t-[45px] border-l-transparent border-r-transparent border-t-yellow-500 drop-shadow-2xl"></div>
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[18px] border-r-[18px] border-t-[38px] border-l-transparent border-r-transparent border-t-yellow-400"></div>
+              {/* Shadow layer */}
+              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[24px] border-r-[24px] border-t-[50px] border-l-transparent border-r-transparent border-t-black/40 blur-sm"></div>
+              
+              {/* Main pointer with gradient and glow */}
+              <div className="relative">
+                <div className="w-0 h-0 border-l-[24px] border-r-[24px] border-t-[50px] border-l-transparent border-r-transparent border-t-yellow-500 drop-shadow-2xl"
+                  style={{
+                    filter: 'drop-shadow(0 0 10px rgba(255, 217, 0, 0)) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6))'
+                  }}></div>
+                
+                {/* Inner golden gradient */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[42px] border-l-transparent border-r-transparent border-t-yellow-300"></div>
+                
+                {/* Highlight effect */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[16px] border-r-[16px] border-t-[35px] border-l-transparent border-r-transparent border-t-yellow-100 opacity-60"></div>
+                
+                {/* Decorative gem */}
+              </div>
             </div>
           </div>
           
@@ -135,51 +373,191 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
             width="min(90vw, 90vh, 600px)"
             height="min(90vw, 90vh, 600px)"
             viewBox="0 0 400 400"
-            className="drop-shadow-2xl max-w-full max-h-full"
+            className="max-w-full max-h-full"
             style={{
               transform: `rotate(${rotation}deg)`,
               transition: isSpinning ? 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)' : 'none',
+              filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.2))',
             }}
           >
-          {/* Outer ring with casino styling */}
+          
+          {/* Advanced gradient definitions */}
+          <defs>
+            {/* Outer ring gradient with metallic effect */}
+            <radialGradient id="outerRingGradient" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#FFD700" />
+              <stop offset="300%" stopColor="#B8860B" />
+              <stop offset="700%" stopColor="#DAA520" />
+              <stop offset="1000%" stopColor="#8B7355" />
+            </radialGradient>
+            
+            {/* Inner ring gradient */}
+            <radialGradient id="innerRingGradient" cx="50%" cy="30%" r="50%">
+              <stop offset="0%" stopColor="#2F4F4F" />
+              <stop offset="50%" stopColor="#1C1C1C" />
+              <stop offset="100%" stopColor="#000000" />
+            </radialGradient>
+            
+            {/* Segment shadow filter */}
+            <filter id="segmentShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="rgba(0,0,0,0.3)"/>
+            </filter>
+            
+            {/* Segment inner shadow */}
+            <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feFlood floodColor="rgba(0,0,0,0.2)"/>
+              <feComposite in="SourceGraphic"/>
+              <feGaussianBlur stdDeviation="2"/>
+              <feOffset dx="1" dy="2"/>
+              <feComposite in2="SourceGraphic" operator="over"/>
+            </filter>
+            
+            {/* Light bulb gradient for casino lights */}
+            <radialGradient id="lightBulbGradient" cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#FFFFFF"/>
+              <stop offset="40%" stopColor="#F8F8FF"/>
+              <stop offset="80%" stopColor="#E6E6FA"/>
+              <stop offset="100%" stopColor="#D3D3D3"/>
+            </radialGradient>
+          </defs>
+          
+          {/* Outer decorative ring with golden metallic effect */}
           <circle
             cx="200"
             cy="200"
-            r="190"
+            r="195"
             fill="url(#outerRingGradient)"
             stroke="#FFD700"
-            strokeWidth="6"
+            strokeWidth="4"
+            opacity="0.9"
           />
           
-          {/* Inner decorative ring */}
-
+          {/* Decorative casino lights around the wheel */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const angle = (i * 360) / 24;
+            const angleRad = (angle * Math.PI) / 180;
+            const lightX = 200 + 190 * Math.cos(angleRad);
+            const lightY = 200 + 190 * Math.sin(angleRad);
+            
+            return (
+              <g key={`light-${i}`} className="casino-light">
+                {/* Light bulb glow effect */}
+                <circle
+                  cx={lightX}
+                  cy={lightY}
+                  r="6"
+                  fill="rgba(255, 255, 255, 0.3)"
+                  opacity="0.8"
+                />
+                
+                {/* Main light bulb */}
+                <circle
+                  cx={lightX}
+                  cy={lightY}
+                  r="4"
+                  fill="url(#lightBulbGradient)"
+                  stroke="#FFD700"
+                  strokeWidth="0.5"
+                />
+                
+                {/* Light highlight */}
+                <circle
+                  cx={lightX - 1}
+                  cy={lightY - 1}
+                  r="1.5"
+                  fill="rgba(255, 255, 255, 0.9)"
+                />
+              </g>
+            );
+          })}
           
-          {/* Gradient definitions */}
-          <defs>
-            <radialGradient id="outerRingGradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2F4F4F" />
-              <stop offset="100%" stopColor="#1C1C1C" />
-            </radialGradient>
-          </defs>
+          {/* Inner base ring */}
+          <circle
+            cx="200"
+            cy="200"
+            r="185"
+            fill="url(#innerRingGradient)"
+            stroke="#333333"
+            strokeWidth="1"
+          />
           
           {/* Segments */}
           {prizes.map(createSegment)}
           
-          {/* Center circle */}
+          {/* Enhanced center circle with metallic effect */}
           <circle
             cx="200"
             cy="200"
-            r="25"
-            fill="#2c3e50"
-            stroke="#34495e"
+            r="30"
+            fill="url(#centerGradient)"
+            stroke="#FFD700"
             strokeWidth="3"
+            filter="url(#centerShadow)"
           />
+          
+          {/* Inner center ring */}
+          <circle
+            cx="200"
+            cy="200"
+            r="22"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.4)"
+            strokeWidth="1"
+          />
+          
+          {/* Center highlight */}
+          <circle
+            cx="196"
+            cy="196"
+            r="8"
+            fill="rgba(255, 255, 255, 0.3)"
+            opacity="0.6"
+          />
+          
+          {/* Additional gradient definitions */}
+          <defs>
+            <radialGradient id="centerGradient" cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#FFD700"/>
+              <stop offset="40%" stopColor="#B8860B"/>
+              <stop offset="80%" stopColor="#2F4F4F"/>
+              <stop offset="100%" stopColor="#1C1C1C"/>
+            </radialGradient>
+            
+            <filter id="centerShadow" x="-100%" y="-100%" width="300%" height="300%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="rgba(0,0,0,0.5)"/>
+              <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="rgba(255,215,0,0.3)"/>
+            </filter>
+          </defs>
           </svg>
 
-          {/* Elegant center circle with D3 logo */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-yellow-600 via-yellow-500 to-yellow-700 border-4 border-yellow-400 shadow-2xl z-10 flex items-center justify-center overflow-hidden">
-            <div className="w-full h-full rounded-full bg-gradient-to-br from-black/20 to-transparent flex items-center justify-center">
-              <img src="/images/d3.jpg" alt="D3" className="w-[100%] h-[100%] rounded-full object-cover border-2 border-yellow-300" />
+          {/* Ultra elegant center logo with advanced effects */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full z-10 flex items-center justify-center">
+            {/* Multiple shadow layers for depth */}
+            
+            {/* Main logo container */}
+            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-500 via-yellow-400 to-yellow-600 border-4 border-yellow-300 overflow-hidden"
+              style={{
+                boxShadow: `
+                  0 0 20px rgba(212, 212, 212, 0.6),
+                  0 0 40px rgba(212, 212, 212, 0.6),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                  inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+                  0 8px 32px rgba(0, 0, 0, 0.3)
+                `
+              }}>
+              
+              {/* Inner gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-black/20 rounded-full"></div>
+              
+              {/* Logo image */}
+              <img 
+                src={logo || "/images/d3.jpg"} 
+                alt="Logo" 
+                className="w-full h-full rounded-full object-cover relative z-10" 
+              />
+              
+              {/* Shine effect */}
+              <div className="absolute top-0 left-0 w-full h-full rounded-full bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 transform rotate-45 translate-x-[-20%] translate-y-[-20%]"></div>
             </div>
           </div>
         </div>
@@ -194,7 +572,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin }) => {
             w-full py-6 px-8 rounded-xl font-bold text-xl shadow-2xl
             transform transition-all duration-300 ease-in-out relative overflow-hidden
             ${isSpinning || prizes.length === 0 
-              ? 'bg-gray-700 text-gray-400 cursor-not-allowed scale-95 opacity-60' 
+              ? 'bg-white text-white cursor-not-allowed scale-95 opacity-60' 
               : 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black cursor-pointer hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-500 hover:scale-105 hover:shadow-3xl active:scale-95'
             }
             border-4 border-yellow-400 backdrop-blur-sm

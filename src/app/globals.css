@@ -62,3 +62,89 @@ body {
     transform: translateX(200%) skewX(-12deg);
   }
 }
+
+/* Custom gradient radial for wheel glow effect */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Enhanced wheel container effects */
+.wheel-container {
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3)) 
+          drop-shadow(0 0 30px rgba(255, 215, 0, 0.1));
+}
+
+/* Spinning glow effect */
+.wheel-spinning {
+  animation: wheel-glow 4s ease-in-out;
+}
+
+@keyframes wheel-glow {
+  0% {
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3)) 
+            drop-shadow(0 0 30px rgba(255, 215, 0, 0.1));
+  }
+  50% {
+    filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.4)) 
+            drop-shadow(0 0 60px rgba(255, 215, 0, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3)) 
+            drop-shadow(0 0 30px rgba(255, 215, 0, 0.1));
+  }
+}
+
+/* Segment highlight animations */
+@keyframes segment-shine {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) skewX(-15deg);
+  }
+}
+
+/* Casino lights twinkling animation */
+@keyframes casino-lights {
+  0% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  25% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+  50% {
+    opacity: 0.9;
+    filter: brightness(1.1);
+  }
+  75% {
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+  100% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+}
+
+.casino-light {
+  animation: casino-lights 3s ease-in-out infinite;
+}
+
+.casino-light:nth-child(2n) {
+  animation-delay: 0.5s;
+}
+
+.casino-light:nth-child(3n) {
+  animation-delay: 1s;
+}
+
+.casino-light:nth-child(4n) {
+  animation-delay: 1.5s;
+}

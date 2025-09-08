@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SpinWheel from '@/components/SpinWheel';
 import PrizeManager from '@/components/PrizeManager';
 import WinnerModal from '@/components/WinnerModal';
 import AudioControls from '@/components/AudioControls';
-import { Prize } from '@/types';
+import { Prize, WheelConfiguration } from '@/types';
+import { getWheelConfiguration } from '@/utils/api';
 
 export default function Home() {
-  const [prizes, setPrizes] = useState<Prize[]>([
+  // Default prizes for fallback
+  const defaultPrizes: Prize[] = [
     { id: '1', text: '$100', color: '#FF6B6B' },
     { id: '2', text: '$50', color: '#4ECDC4' },
     { id: '3', text: '$30', color: '#45B7D1' },
@@ -17,14 +19,39 @@ export default function Home() {
     { id: '6', text: 'JACKPOT!', color: '#FF9FF3' },
     { id: '7', text: '$5', color: '#54A0FF' },
     { id: '8', text: 'Inténtalo de nuevo', color: '#5F27CD' },
-  ]);
+  ];
 
+  const [prizes, setPrizes] = useState<Prize[]>(defaultPrizes);
+  const [wheelConfig, setWheelConfig] = useState<WheelConfiguration | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [winner, setWinner] = useState<Prize | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showPrizeManager, setShowPrizeManager] = useState(false);
 
-  const handleWin = (prize: Prize) => {
-    setWinner(prize);
+  // Fetch wheel configuration from API
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        setIsLoading(true);
+        const config = await getWheelConfiguration(1);
+        setWheelConfig(config);
+        setPrizes(config.prizes);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch wheel configuration:', err);
+        setError('Failed to load wheel configuration. Using default settings.');
+        // Keep default prizes if API fails
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchConfig();
+  }, []);
+
+  const handleWin = (prize: Prize, isPositive?: boolean) => {
+    setWinner({...prize, positive: isPositive});
     setShowWinnerModal(true);
   };
 
@@ -44,27 +71,28 @@ export default function Home() {
         }}></div>
       </div>
 
-      {/* Controls - Fixed at top right */}
-      <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
-        <button
-          onClick={() => setShowPrizeManager(!showPrizeManager)}
-          className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-bold py-3 px-4 rounded-lg shadow-2xl hover:from-yellow-400 hover:to-yellow-500 transition-all transform hover:scale-105 text-sm border border-yellow-400"
-        >
-          {showPrizeManager ? '✕' : '⚙️'}
-        </button>
-        <AudioControls />
-      </div>
+      {/* Loading state */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/50">
+          <div className="text-white text-xl font-bold">PREPARANDO LA RULETA...</div>
+        </div>
+      )}
 
-      {/* Prize Manager - Overlay */}
-      {showPrizeManager && (
-        <div className="absolute top-16 right-4 z-20 max-h-[calc(100vh-120px)] overflow-y-auto">
-          <PrizeManager prizes={prizes} onPrizesChange={setPrizes} />
+      {/* Error message */}
+      {error && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg">
+          {error}
         </div>
       )}
 
       {/* Main Wheel Container - Takes most of the screen */}
       <div className="flex-1 flex items-center justify-center p-2">
-        <SpinWheel prizes={prizes} onWin={handleWin} />
+        <SpinWheel 
+          prizes={prizes} 
+          onWin={handleWin} 
+          colors={wheelConfig?.colors}
+          logo={wheelConfig?.logo}
+        />
       </div>
 
       {/* Winner Modal */}
