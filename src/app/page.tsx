@@ -40,7 +40,7 @@ export default function Home() {
         setError(null);
       } catch (err) {
         console.error('Failed to fetch wheel configuration:', err);
-        setError('Failed to load wheel configuration. Using default settings.');
+        setError('Failed to load wheel configuration. Using default settingsS.');
         // Keep default prizes if API fails
       } finally {
         setIsLoading(false);
