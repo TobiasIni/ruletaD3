@@ -78,7 +78,7 @@ export default function Home() {
       )}
 
       {/* Main Wheel Container - Takes most of the screen */}
-      <div className="flex-1 flex items-center justify-center p-2">
+      <div className="flex-1 flex items-center justify-center p-1">
         <SpinWheel 
           prizes={prizes} 
           onWin={handleWin} 

@@ -37,12 +37,11 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose, logo
         
         // Set a small delay to ensure DOM is ready
         const timer = setTimeout(() => {
-          console.log('🚀 Launching WINNER confetti NOW!');
           
           try {
             confetti.addConfetti({
               confettiRadius: 10,
-              confettiNumber: 150,
+              confettiNumber: 50,
               confettiColors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
             });
             console.log('✅ First winner confetti launched successfully');
@@ -50,10 +49,15 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose, logo
             // Second burst for winners
             setTimeout(() => {
               try {
-                confetti.addConfetti({
+              /*   confetti.addConfetti({
                   emojis: ['🎉', '🎊', '💰', '🏆', '⭐'],
                   emojiSize: 30,
                   confettiNumber: 30,
+                }); */
+                confetti.addConfetti({
+                  confettiRadius: 10,
+                  confettiNumber: 50,
+                  confettiColors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
                 });
                 console.log('✅ Second winner confetti launched successfully');
               } catch (error) {
@@ -88,7 +92,7 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose, logo
           : 'from-red-900/30 via-transparent to-gray-900/30'
       }`}></div>
 
-      <div className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-6 sm:p-8 md:p-10 lg:p-12 w-[90vw] sm:w-[80vw] md:w-[75vw] h-[90vh] sm:h-[80vh] md:h-[75vh] max-w-4xl max-h-[800px] min-w-[320px] min-h-[400px] text-center shadow-2xl transform border-4 ${
+            <div className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-6 sm:p-8 md:p-10 lg:p-12 w-[90vw] sm:w-[80vw] md:w-[75vw] h-[99vh] sm:h-[95vh] md:h-[90vh] max-w-4xl max-h-[1200px] min-w-[320px] min-h-[600px] text-center shadow-2xl transform border-4 ${
         isPositive ? 'border-green-500' : 'border-red-500'
       } relative overflow-hidden`}>
         {/* Shine effect */}

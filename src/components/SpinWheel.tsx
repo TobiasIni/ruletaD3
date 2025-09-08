@@ -411,7 +411,16 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-2 sm:px-4">
+    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-1">
+      {/* Company Logo at the top - Optimized for 1080x1920 */}
+      <div className="mb-2 sm:mb-3 flex justify-center">
+        <img 
+          src={logo || "/images/d3.jpg"} 
+          alt="Logo de la empresa" 
+          className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain" 
+        />
+      </div>
+
       {/* Ambient glow effect */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
@@ -453,8 +462,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           <svg
             ref={wheelRef}
-            width="min(85vw, 85vh, 600px)"
-            height="min(85vw, 85vh, 600px)"
+            width="min(75vw, 60vh, 500px)"
+            height="min(75vw, 60vh, 500px)"
             viewBox="0 0 400 400"
             className="max-w-full max-h-full"
             style={{
@@ -647,12 +656,12 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
       </div>
 
       {/* Elegant casino spin button */}
-      <div className="w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-5 md:pb-6">
+      <div className="w-full px-2 pb-2">
         <button
           onClick={spinWheel}
           disabled={isSpinning || prizes.length === 0}
           className={`
-            w-full py-4 sm:py-5 md:py-6 px-4 sm:px-6 md:px-8 rounded-lg sm:rounded-xl font-bold text-lg sm:text-xl
+            w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-bold text-base sm:text-lg
             transform transition-all duration-200 ease-in-out relative overflow-hidden
             ${isSpinning || prizes.length === 0 
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-60' 
@@ -679,7 +688,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           <span className="flex items-center justify-center space-x-2 sm:space-x-3 relative z-10">
        
-            <span className="text-lg sm:text-xl md:text-2xl font-share-tech tracking-wider">
+            <span className="text-base sm:text-lg font-share-tech tracking-wider">
               {isSpinning ? 'Probando suerte...' : 'GIRAR'}
             </span>
           </span>
