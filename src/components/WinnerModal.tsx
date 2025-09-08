@@ -8,9 +8,10 @@ interface WinnerModalProps {
   winner: Prize | null;
   isOpen: boolean;
   onClose: () => void;
+  logo?: string;
 }
 
-const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose }) => {
+const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose, logo }) => {
   const jsConfetti = useRef<JSConfetti | null>(null);
 
   useEffect(() => {
@@ -83,31 +84,54 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose }) =>
       {/* Elegant background pattern */}
       <div className={`absolute inset-0 bg-gradient-to-br ${
         isPositive 
-          ? 'from-yellow-900/20 via-transparent to-red-900/20' 
+          ? 'from-green-900/20 via-transparent to-red-900/20' 
           : 'from-red-900/30 via-transparent to-gray-900/30'
       }`}></div>
 
-      <div className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl transform border-4 ${
-        isPositive ? 'border-yellow-500' : 'border-red-500'
+      <div className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-6 sm:p-8 md:p-10 lg:p-12 w-[90vw] sm:w-[80vw] md:w-[75vw] h-[90vh] sm:h-[80vh] md:h-[75vh] max-w-4xl max-h-[800px] min-w-[320px] min-h-[400px] text-center shadow-2xl transform border-4 ${
+        isPositive ? 'border-green-500' : 'border-red-500'
       } relative overflow-hidden`}>
         {/* Shine effect */}
         <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${
-          isPositive ? 'via-yellow-500/20' : 'via-red-500/20'
+          isPositive ? 'via-green-500/20' : 'via-red-500/20'
         } to-transparent transform rotate-45 translate-x-[-100%] animate-pulse`}></div>
         
+        {/* Close button (X) - Animated button at bottom center */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="sub_cnt">
+            <button 
+              className="for_active hover" 
+              onClick={onClose}
+              title="Click On Me"
+            >
+              <span className="arrow"></span>
+            </button>
+          </div>
+        </div>
+        
         <div className="relative z-10">
-          <div className="mb-6">
-            <p className={`text-xl ${
-              isPositive ? 'text-yellow-300' : 'text-red-300'
-            } font-serif`}>
-              {isPositive ? '¡Felicidades! Ganaste:' : '¡Mejor suerte la próxima vez!'}
+          {/* Logo section */}
+          <div className="mb-32 sm:mb-40 md:mb-48">
+            <div className="flex justify-center mb-6 sm:mb-8">
+              <img 
+                src={logo || "/images/d3.jpg"} 
+                alt="Logo" 
+                className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain bg-transparent" 
+              />
+            </div>
+
+       
+            <p className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl ${
+              isPositive ? 'text-green-300' : 'text-red-300'
+            } font-share-tech font-bold`}>
+              {isPositive ? '¡Felicidades!' : '¡Mejor suerte la próxima vez!'}
             </p>
-           
           </div>
 
-          <div
-            className={`inline-block px-8 py-6 rounded-xl text-white font-bold text-3xl mb-8 shadow-2xl border-4 ${
-              isPositive ? 'border-yellow-400' : 'border-red-400'
+                {/* Prize display */}
+                <div
+            className={`inline-block px-8 sm:px-12 md:px-16 py-6 sm:py-8 md:py-10 rounded-xl text-white font-share-tech font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-6 sm:mb-8 shadow-2xl border-4 ${
+              isPositive ? 'border-green-400' : 'border-red-400'
             } bg-gradient-to-br from-gray-800 to-black`}
             style={{ 
               backgroundColor: winner.color,
@@ -116,31 +140,9 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winner, isOpen, onClose }) =>
           >
             {winner.text}
           </div>
+            
 
-          <div className="space-y-4">
-            <button
-              onClick={onClose}
-              className={`w-full ${
-                isPositive 
-                  ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-green-400 hover:from-green-500 hover:to-green-600' 
-                  : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white border-gray-400 hover:from-gray-500 hover:to-gray-600'
-              } py-4 px-6 rounded-xl transition-all font-bold text-lg border-2 transform hover:scale-105 shadow-xl`}
-            >
-              {isPositive ? '¡EXCELENTE!' : 'ENTENDIDO'}
-            </button>
-            <button
-              onClick={() => {
-                onClose();
-              }}
-              className={`w-full ${
-                isPositive 
-                  ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-black border-yellow-400 hover:from-yellow-500 hover:to-yellow-600' 
-                  : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-400 hover:from-blue-500 hover:to-blue-600'
-              } py-4 px-6 rounded-xl transition-all font-bold text-lg border-2 transform hover:scale-105 shadow-xl`}
-            >
-              {isPositive ? 'GIRAR DE NUEVO' : 'INTENTAR DE NUEVO'}
-            </button>
-          </div>
+        
         </div>
       </div>
     </div>

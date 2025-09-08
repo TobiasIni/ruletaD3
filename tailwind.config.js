@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       fontFamily: {
         'oswald': ['var(--font-oswald)', 'sans-serif'],
+        'share-tech': ['var(--font-share-tech)', 'monospace'],
       },
       animation: {
         'spin-wheel': 'spin-wheel 4s cubic-bezier(0.23, 1, 0.32, 1) forwards',

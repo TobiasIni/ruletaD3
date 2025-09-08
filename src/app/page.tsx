@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import SpinWheel from '@/components/SpinWheel';
 import PrizeManager from '@/components/PrizeManager';
-import WinnerModal from '@/components/WinnerModal';
 import AudioControls from '@/components/AudioControls';
 import { Prize, WheelConfiguration } from '@/types';
 import { getWheelConfiguration } from '@/utils/api';
@@ -25,8 +24,6 @@ export default function Home() {
   const [wheelConfig, setWheelConfig] = useState<WheelConfiguration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [winner, setWinner] = useState<Prize | null>(null);
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showPrizeManager, setShowPrizeManager] = useState(false);
 
   // Fetch wheel configuration from API
@@ -51,13 +48,8 @@ export default function Home() {
   }, []);
 
   const handleWin = (prize: Prize, isPositive?: boolean) => {
-    setWinner({...prize, positive: isPositive});
-    setShowWinnerModal(true);
-  };
-
-  const closeWinnerModal = () => {
-    setShowWinnerModal(false);
-    setWinner(null);
+    // This function is now handled by SpinWheel's internal modal
+    console.log('Prize won:', prize, 'isPositive:', isPositive);
   };
 
   return (
@@ -95,12 +87,6 @@ export default function Home() {
         />
       </div>
 
-      {/* Winner Modal */}
-      <WinnerModal
-        winner={winner}
-        isOpen={showWinnerModal}
-        onClose={closeWinnerModal}
-      />
     </div>
   );
 }

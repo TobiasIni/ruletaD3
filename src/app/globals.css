@@ -148,3 +148,93 @@ body {
 .casino-light:nth-child(4n) {
   animation-delay: 1.5s;
 }
+
+/* Animated Close Button Styles */
+.sub_cnt {
+  display: inline-block;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+  border-radius: 5px;
+  position: relative;
+}
+
+/* Button styles */
+.sub_cnt button {
+  vertical-align: middle;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background-color: transparent;
+  overflow: hidden;
+  border: 1px solid #333;
+  transition: all 0.4s ease-in-out 0s;
+  cursor: pointer;
+  border-radius: 25px;  
+  background-color: red;
+}
+
+.arrow, .arrow:after, .sub_cnt button:after, .sub_cnt button:before {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  left: 50%;
+  width: 3px;
+  height: 30px;
+  background-color: #000;
+  transition: all 0.4s ease-in-out 0s;
+}
+
+.arrow:after, .sub_cnt button:after, .sub_cnt button:before { 
+  content: ''; 
+}
+
+.arrow:after { 
+  transform: translate(0px, -100px); 
+} 
+
+.sub_cnt button:before { 
+  transform: translate(-50%, -50%) rotate(-45deg);  
+}
+
+.sub_cnt button:after { 
+  transform: translate(-60px, -75px) rotate(-45deg);  
+}
+
+.sub_cnt button:focus, .sub_cnt button:focus .arrow:focus {
+  outline: none;
+}
+
+.sub_cnt button.hover:hover:after,
+.sub_cnt button.focus:focus:after,
+.sub_cnt button.active:after { 
+  transform: translate(0px, -14px) rotate(-45deg);
+}
+
+.sub_cnt button.hover:hover:before,
+.sub_cnt button.focus:focus:before,
+.sub_cnt button.active:before {
+  transform: translate(60px, 45px) rotate(-45deg);
+}
+
+.sub_cnt button.hover:hover .arrow,
+.sub_cnt button.focus:focus .arrow,
+.sub_cnt button.active .arrow {
+  transform: translate(-61px, 45px) rotate(45deg); 
+}
+
+.sub_cnt button.hover:hover:after,
+.sub_cnt button.hover:hover .arrow:after,
+.sub_cnt button.focus:focus:after,
+.sub_cnt button.focus:focus .arrow:after,
+.sub_cnt button.active:after,
+.sub_cnt button.active .arrow:after {
+  background-color: red;
+}
+
+.sub_cnt button.hover:hover,
+.sub_cnt button.focus:focus,
+.sub_cnt button.active { 
+  background-color: #fff; 
+  border-color: #fff; 
+}

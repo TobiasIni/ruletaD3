@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Prize } from '@/types';
 import { getAudioManager } from '@/utils/audioUtils';
 import { spinRoulette, findPrizeByApiResponse } from '@/utils/api';
+import WinnerModal from './WinnerModal';
 
 interface SpinWheelProps {
   prizes: Prize[];
@@ -16,6 +17,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
   const [isSpinning, setIsSpinning] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [rotation, setRotation] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [winner, setWinner] = useState<Prize | null>(null);
   const wheelRef = useRef<SVGSVGElement>(null);
   const audioManager = useRef(getAudioManager());
 
@@ -148,21 +151,22 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           opacity="0.7"
         />
 
-        {/* Clean text without heavy shadows for better readability */}
+        {/* Clean text with enhanced stroke for Share Tech font */}
         <text
           x={textX}
           y={textY}
           fill="white"
-          fontSize="16"
+          fontSize="clamp(10px, 2.5vw, 16px)"
           fontWeight="bold"
-          fontFamily="var(--font-oswald), sans-serif"
+          fontFamily="var(--font-share-tech), monospace"
           textAnchor="middle"
           dominantBaseline="central"
           transform={`rotate(${textAngle}, ${textX}, ${textY})`}
           stroke="#000000"
-          strokeWidth="0.3"
+          strokeWidth="1.5"
           style={{
-            filter: 'drop-shadow(0 1px 2px rgb(0, 0, 0))',
+            filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8))',
+            paintOrder: 'stroke fill',
           }}
         >
           {prize.text}
@@ -302,6 +306,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           };
           
           console.log('🏆 Final prize to show (from API):', prizeToShow);
+          setWinner(prizeToShow);
+          setShowModal(true);
           onWin(prizeToShow, isPositive);
         }, 4000);
       } else {
@@ -332,56 +338,67 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
         setIsSpinning(false);
         // In fallback mode, assume it's positive and play winner sound
         audioManager.current.playWinnerSound();
+        setWinner(winningPrize);
+        setShowModal(true);
         onWin(winningPrize, true);
       }, 4000);
     }
   };
 
+  // Function to close modal with animation delay
+  const closeModal = () => {
+    // Add a small delay to let the button animation play
+    setTimeout(() => {
+      setShowModal(false);
+      setWinner(null);
+    }, 400); // 400ms delay to match the CSS animation duration
+  };
+
   // Loading component
   const LoadingSpinner = () => (
-    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl">
+    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-4">
       {/* Ambient glow effect */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-96 h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
+        <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
       </div>
       
       <div className="relative z-10 flex flex-col items-center justify-center">
         {/* Main loading spinner */}
-        <div className="relative w-64 h-64 mb-8">
+        <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mb-6 sm:mb-8">
           {/* Outer rotating ring */}
-          <div className="absolute inset-0 rounded-full border-8 border-yellow-500/30 border-t-yellow-500 animate-spin"></div>
+          <div className="absolute inset-0 rounded-full border-4 sm:border-6 md:border-8 border-yellow-500/30 border-t-yellow-500 animate-spin"></div>
           
           {/* Inner rotating ring */}
-          <div className="absolute inset-4 rounded-full border-6 border-yellow-400/40 border-t-yellow-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          <div className="absolute inset-3 sm:inset-4 rounded-full border-3 sm:border-4 md:border-6 border-yellow-400/40 border-t-yellow-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
           
           {/* Center content */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               {/* Casino dice icon */}
-              <div className="text-6xl mb-4 animate-bounce">🎰</div>
+              <div className="text-4xl sm:text-5xl md:text-6xl mb-2 sm:mb-3 md:mb-4 animate-bounce">🎰</div>
               
               {/* Loading text */}
-              <div className="text-2xl font-bold text-yellow-500 font-oswald tracking-wider">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-yellow-500 font-share-tech tracking-wider px-2">
                 CARGANDO RULETA
               </div>
               
               {/* Loading dots */}
-              <div className="flex justify-center space-x-1 mt-4">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <div className="flex justify-center space-x-1 mt-2 sm:mt-3 md:mt-4">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
               </div>
             </div>
           </div>
         </div>
         
         {/* Loading progress bar */}
-        <div className="w-80 h-2 bg-yellow-500/20 rounded-full overflow-hidden">
+        <div className="w-64 sm:w-72 md:w-80 h-1.5 sm:h-2 bg-yellow-500/20 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full animate-pulse"></div>
         </div>
         
         {/* Loading text */}
-        <p className="text-yellow-600 text-lg font-oswald mt-6 animate-pulse">
+        <p className="text-yellow-600 text-sm sm:text-base md:text-lg font-share-tech mt-4 sm:mt-5 md:mt-6 animate-pulse text-center px-4">
           Preparando la experiencia de casino...
         </p>
       </div>
@@ -394,10 +411,10 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl">
+    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-2 sm:px-4">
       {/* Ambient glow effect */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-96 h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
+        <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
       </div>
       
       <div className={`relative wheel-container flex-1 flex items-center justify-center z-10 ${isSpinning ? 'wheel-spinning' : ''}`}>
@@ -411,23 +428,23 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
             `
           }}>
           {/* Ultra elegant casino pointer with advanced shadows */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-3 z-20">
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 sm:-translate-y-3 z-20">
             <div className="relative">
               {/* Shadow layer */}
-              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[24px] border-r-[24px] border-t-[50px] border-l-transparent border-r-transparent border-t-black/40 blur-sm"></div>
+              <div className="absolute top-0.5 sm:top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[16px] sm:border-l-[20px] md:border-l-[24px] border-r-[16px] sm:border-r-[20px] md:border-r-[24px] border-t-[32px] sm:border-t-[42px] md:border-t-[50px] border-l-transparent border-r-transparent border-t-black/40 blur-sm"></div>
               
               {/* Main pointer with gradient and glow */}
               <div className="relative">
-                <div className="w-0 h-0 border-l-[24px] border-r-[24px] border-t-[50px] border-l-transparent border-r-transparent border-t-yellow-500 drop-shadow-2xl"
+                <div className="w-0 h-0 border-l-[16px] sm:border-l-[20px] md:border-l-[24px] border-r-[16px] sm:border-r-[20px] md:border-r-[24px] border-t-[32px] sm:border-t-[42px] md:border-t-[50px] border-l-transparent border-r-transparent border-t-yellow-500 drop-shadow-2xl"
                   style={{
                     filter: 'drop-shadow(0 0 10px rgba(255, 217, 0, 0)) drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6))'
                   }}></div>
                 
                 {/* Inner golden gradient */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[42px] border-l-transparent border-r-transparent border-t-yellow-300"></div>
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[12px] sm:border-l-[16px] md:border-l-[20px] border-r-[12px] sm:border-r-[16px] md:border-r-[20px] border-t-[28px] sm:border-t-[36px] md:border-t-[42px] border-l-transparent border-r-transparent border-t-yellow-300"></div>
                 
                 {/* Highlight effect */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[16px] border-r-[16px] border-t-[35px] border-l-transparent border-r-transparent border-t-yellow-100 opacity-60"></div>
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[10px] sm:border-l-[14px] md:border-l-[16px] border-r-[10px] sm:border-r-[14px] md:border-r-[16px] border-t-[24px] sm:border-t-[30px] md:border-t-[35px] border-l-transparent border-r-transparent border-t-yellow-100 opacity-60"></div>
                 
                 {/* Decorative gem */}
               </div>
@@ -436,8 +453,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           <svg
             ref={wheelRef}
-            width="min(90vw, 90vh, 600px)"
-            height="min(90vw, 90vh, 600px)"
+            width="min(85vw, 85vh, 600px)"
+            height="min(85vw, 85vh, 600px)"
             viewBox="0 0 400 400"
             className="max-w-full max-h-full"
             style={{
@@ -597,11 +614,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           </svg>
 
           {/* Ultra elegant center logo with advanced effects */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full z-10 flex items-center justify-center">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full z-10 flex items-center justify-center">
             {/* Multiple shadow layers for depth */}
             
             {/* Main logo container */}
-            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-500 via-yellow-400 to-yellow-600 border-4 border-yellow-300 overflow-hidden"
+            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-500 via-yellow-400 to-yellow-600 border-2 sm:border-3 md:border-4 border-yellow-300 overflow-hidden"
               style={{
                 boxShadow: `
                   0 0 20px rgba(212, 212, 212, 0.6),
@@ -630,18 +647,22 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
       </div>
 
       {/* Elegant casino spin button */}
-      <div className="w-full px-6 pb-6">
+      <div className="w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-5 md:pb-6">
         <button
           onClick={spinWheel}
           disabled={isSpinning || prizes.length === 0}
           className={`
-            w-full py-6 px-8 rounded-xl font-bold text-xl shadow-2xl
-            transform transition-all duration-300 ease-in-out relative overflow-hidden
+            w-full py-4 sm:py-5 md:py-6 px-4 sm:px-6 md:px-8 rounded-lg sm:rounded-xl font-bold text-lg sm:text-xl
+            transform transition-all duration-200 ease-in-out relative overflow-hidden
             ${isSpinning || prizes.length === 0 
-              ? 'bg-white text-white cursor-not-allowed scale-95 opacity-60' 
-              : 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black cursor-pointer hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-500 hover:scale-105 hover:shadow-3xl active:scale-95'
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-60' 
+              : 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black cursor-pointer hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-500'
             }
-            border-4 border-yellow-400 backdrop-blur-sm
+            border-2 sm:border-3 md:border-4 border-yellow-400 backdrop-blur-sm
+            ${isSpinning 
+              ? 'top-3 shadow-lg' 
+              : 'top-0 shadow-[0_7px_0px_#B8860B] hover:shadow-[0_7px_0px_#B8860B] active:top-3 active:shadow-lg'
+            }
           `}
           style={{
             background: isSpinning || prizes.length === 0 
@@ -656,16 +677,22 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-[-100%] animate-pulse"></div>
           )}
           
-          <span className="flex items-center justify-center space-x-3 relative z-10">
-            <span className={`text-3xl ${isSpinning ? 'animate-spin' : ''}`}>
-              {isSpinning ? '🎰' : '🎲'}
-            </span>
-            <span className="text-2xl font-oswald tracking-wider">
-              {isSpinning ? 'GIRANDO...' : 'GIRAR RULETA'}
+          <span className="flex items-center justify-center space-x-2 sm:space-x-3 relative z-10">
+       
+            <span className="text-lg sm:text-xl md:text-2xl font-share-tech tracking-wider">
+              {isSpinning ? 'Probando suerte...' : 'GIRAR'}
             </span>
           </span>
         </button>
       </div>
+
+      {/* Winner Modal */}
+      <WinnerModal 
+        winner={winner}
+        isOpen={showModal}
+        onClose={closeModal}
+        logo={logo}
+      />
     </div>
   );
 };
