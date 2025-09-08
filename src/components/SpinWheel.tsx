@@ -14,6 +14,7 @@ interface SpinWheelProps {
 
 const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors, logo }) => {
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<SVGSVGElement>(null);
   const audioManager = useRef(getAudioManager());
@@ -27,6 +28,15 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
 
   // Calculate segment angle
   const segmentAngle = 360 / prizes.length;
+
+  // Simulate initial loading time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000); // 2 seconds loading time
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Function to verify which segment is at the pointer after rotation
   const verifyLandingSegment = (finalRotation: number): number => {
@@ -327,6 +337,62 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
     }
   };
 
+  // Loading component
+  const LoadingSpinner = () => (
+    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl">
+      {/* Ambient glow effect */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-96 h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
+      </div>
+      
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        {/* Main loading spinner */}
+        <div className="relative w-64 h-64 mb-8">
+          {/* Outer rotating ring */}
+          <div className="absolute inset-0 rounded-full border-8 border-yellow-500/30 border-t-yellow-500 animate-spin"></div>
+          
+          {/* Inner rotating ring */}
+          <div className="absolute inset-4 rounded-full border-6 border-yellow-400/40 border-t-yellow-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          
+          {/* Center content */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              {/* Casino dice icon */}
+              <div className="text-6xl mb-4 animate-bounce">🎰</div>
+              
+              {/* Loading text */}
+              <div className="text-2xl font-bold text-yellow-500 font-oswald tracking-wider">
+                CARGANDO RULETA
+              </div>
+              
+              {/* Loading dots */}
+              <div className="flex justify-center space-x-1 mt-4">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Loading progress bar */}
+        <div className="w-80 h-2 bg-yellow-500/20 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full animate-pulse"></div>
+        </div>
+        
+        {/* Loading text */}
+        <p className="text-yellow-600 text-lg font-oswald mt-6 animate-pulse">
+          Preparando la experiencia de casino...
+        </p>
+      </div>
+    </div>
+  );
+
+  // Show loading spinner while loading
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl">
       {/* Ambient glow effect */}
@@ -336,7 +402,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
       
       <div className={`relative wheel-container flex-1 flex items-center justify-center z-10 ${isSpinning ? 'wheel-spinning' : ''}`}>
         {/* Enhanced wheel container with floating effect */}
-        <div className="relative transform transition-all duration-300 hover:scale-105"
+        <div className="relative transform transition-all duration-300"
           style={{
             filter: `
               drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25))
