@@ -46,6 +46,25 @@ docker-compose build --no-cache
 docker system prune -a
 ```
 
+## Solución de Problemas
+
+### Error: "The system cannot find the file specified"
+**Causa**: Docker Desktop no está ejecutándose
+**Solución**: 
+1. Abre Docker Desktop desde el menú de Windows
+2. Espera a que aparezca el ícono de Docker en la bandeja del sistema
+3. Verifica que esté ejecutándose con: `docker ps`
+
+### Error: "unable to get image"
+**Causa**: La imagen no existe o Docker no está funcionando
+**Solución**:
+1. Asegúrate de que Docker Desktop esté ejecutándose
+2. Reconstruye la imagen: `docker-compose build --no-cache`
+
+### Error: "version is obsolete"
+**Causa**: El atributo `version` ya no es necesario en docker-compose
+**Solución**: Ya corregido en el archivo docker-compose.yml
+
 ## Características del Dockerfile
 
 - **Multi-stage build**: Optimiza el tamaño de la imagen final
