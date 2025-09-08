@@ -34,7 +34,7 @@ export default function Home() {
     const fetchConfig = async () => {
       try {
         setIsLoading(true);
-        const config = await getWheelConfiguration(1);
+        const config = await getWheelConfiguration();
         setWheelConfig(config);
         setPrizes(config.prizes);
         setError(null);

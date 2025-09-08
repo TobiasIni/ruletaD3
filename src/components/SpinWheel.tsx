@@ -180,7 +180,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
 
     try {
       // Call the API to get the winning prize
-      const spinResponse = await spinRoulette(1);
+      const spinResponse = await spinRoulette();
       
       if (spinResponse.exito) {
         console.log('🎲 API Spin Response:', spinResponse);

@@ -1,8 +1,9 @@
 import { RouletteConfig, WheelConfiguration, Prize, ApiPrize, SpinResponse } from '@/types';
 
-const API_BASE_URL = 'https://api-cmsd3.emanzano.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-cmsd3.emanzano.com';
+const DEFAULT_RULETA_ID = parseInt(process.env.RULETA_ID || '5');
 
-export async function fetchRouletteConfig(ruletaId: number = 5): Promise<RouletteConfig> {
+export async function fetchRouletteConfig(ruletaId: number = DEFAULT_RULETA_ID): Promise<RouletteConfig> {
   try {
     const response = await fetch(`${API_BASE_URL}/ruletas/${ruletaId}/config`, {
       method: 'GET',
@@ -88,12 +89,12 @@ export function transformApiDataToWheelConfig(apiData: RouletteConfig): WheelCon
   };
 }
 
-export async function getWheelConfiguration(ruletaId: number = 1): Promise<WheelConfiguration> {
+export async function getWheelConfiguration(ruletaId: number = DEFAULT_RULETA_ID): Promise<WheelConfiguration> {
   const apiData = await fetchRouletteConfig(ruletaId);
   return transformApiDataToWheelConfig(apiData);
 }
 
-export async function spinRoulette(ruletaId: number = 1): Promise<SpinResponse> {
+export async function spinRoulette(ruletaId: number = DEFAULT_RULETA_ID): Promise<SpinResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/ruletas/${ruletaId}/spin`, {
       method: 'POST',
