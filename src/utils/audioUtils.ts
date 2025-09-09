@@ -147,6 +147,36 @@ export class AudioManager {
     }
   }
 
+  public pauseBackgroundMusic() {
+    if (this.backgroundMusic && !this.backgroundMusic.paused) {
+      this.backgroundMusic.pause();
+      console.log('⏸️ Background music paused');
+    }
+  }
+
+  public resumeBackgroundMusic() {
+    if (this.backgroundMusic && this.backgroundMusic.paused) {
+      this.backgroundMusic.play().catch(error => {
+        console.error('Error resuming background music:', error);
+      });
+      console.log('▶️ Background music resumed');
+    }
+  }
+
+  public lowerBackgroundMusicVolume() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.volume = 0.0; // Bajar a 10% del volumen
+      console.log('🔉 Background music volume lowered to 10%');
+    }
+  }
+
+  public restoreBackgroundMusicVolume() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.volume = 1.0; // Restaurar a 100% del volumen
+      console.log('🔊 Background music volume restored to 100%');
+    }
+  }
+
   public forceStartBackgroundMusic() {
     if (!this.backgroundMusic) return;
     

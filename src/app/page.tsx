@@ -27,6 +27,7 @@ export default function Home() {
   const audioManager = useRef(getAudioManager());
   const [backgroundMusicStarted, setBackgroundMusicStarted] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [wasMusicPlayingBeforeSpin, setWasMusicPlayingBeforeSpin] = useState(false);
 
   // Fetch wheel configuration from API
   useEffect(() => {
@@ -74,6 +75,23 @@ export default function Home() {
     console.log('Prize won:', prize, 'isPositive:', isPositive);
   };
 
+  const handleSpinStart = () => {
+    // Remember if music was playing before spin
+    setWasMusicPlayingBeforeSpin(isMusicPlaying);
+    
+    // Lower background music volume when spin starts
+    audioManager.current.lowerBackgroundMusicVolume();
+    console.log('🔉 Background music volume lowered for spin');
+  };
+
+  const handleModalClose = () => {
+    // Restore background music volume when modal closes (if it was playing before)
+    if (wasMusicPlayingBeforeSpin) {
+      audioManager.current.restoreBackgroundMusicVolume();
+      console.log('🔊 Background music volume restored after modal close');
+    }
+  };
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black flex flex-col overflow-hidden relative">
       {/* Elegant background pattern */}
@@ -106,6 +124,8 @@ export default function Home() {
           onWin={handleWin} 
           colors={wheelConfig?.colors}
           logo={wheelConfig?.logo}
+          onSpinStart={handleSpinStart}
+          onModalClose={handleModalClose}
         />
       </div>
 

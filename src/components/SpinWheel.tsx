@@ -11,9 +11,11 @@ interface SpinWheelProps {
   onWin: (prize: Prize, isPositive?: boolean) => void;
   colors?: string[];
   logo?: string;
+  onSpinStart?: () => void;
+  onModalClose?: () => void;
 }
 
-const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors, logo }) => {
+const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors, logo, onSpinStart, onModalClose }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [rotation, setRotation] = useState(0);
@@ -189,6 +191,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
 
     setIsSpinning(true);
 
+    // Notify parent component that spin started (to pause background music)
+    if (onSpinStart) {
+      onSpinStart();
+    }
+
     // Start playing the roulette spin sound immediately
     audioManager.current.playRouletteSpinSound();
 
@@ -323,6 +330,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
     setTimeout(() => {
       setShowModal(false);
       setWinner(null);
+      
+      // Notify parent component that modal closed (to resume background music)
+      if (onModalClose) {
+        onModalClose();
+      }
     }, 400); // 400ms delay to match the CSS animation duration
   };
 
