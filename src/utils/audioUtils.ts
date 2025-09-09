@@ -90,7 +90,6 @@ export class AudioManager {
     }
 
     try {
-      this.loserAudio.currentTime = 0;
       console.log('🎵 Playing loser sound...');
       await this.loserAudio.play();
       console.log('✅ Loser sound played successfully');
@@ -113,6 +112,8 @@ export class AudioManager {
           this.backgroundMusic!.addEventListener('canplay', resolve, { once: true });
         });
       }
+
+    
 
       // Reset to beginning and play
       this.backgroundMusic.currentTime = 0;
@@ -154,6 +155,10 @@ export class AudioManager {
     }
   }
 
+  public isBackgroundMusicPlaying(): boolean {
+    return this.backgroundMusic ? !this.backgroundMusic.paused : false;
+  }
+
   public setVolume(rouletteVolume: number, winnerVolume: number, loserVolume?: number, backgroundVolume?: number) {
     // All volumes are set to 100% by default, this method is kept for compatibility
     if (this.rouletteSpinAudio) {
@@ -161,9 +166,6 @@ export class AudioManager {
     }
     if (this.winnerAudio) {
       this.winnerAudio.volume = 1.0;
-    }
-    if (this.loserAudio) {
-      this.loserAudio.volume = 1.0;
     }
     if (this.backgroundMusic) {
       this.backgroundMusic.volume = 1.0;
