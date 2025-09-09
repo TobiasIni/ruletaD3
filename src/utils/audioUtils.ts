@@ -42,6 +42,12 @@ export class AudioManager {
       this.backgroundMusic.addEventListener('playing', () => console.log('🎵 Background music is playing'));
       this.backgroundMusic.addEventListener('error', (e) => console.error('🎵 Background music error:', e));
 
+      // Add event listeners for loser sound debugging
+      this.loserAudio.addEventListener('loadstart', () => console.log('🎵 Loser sound load started'));
+      this.loserAudio.addEventListener('canplay', () => console.log('🎵 Loser sound can play'));
+      this.loserAudio.addEventListener('playing', () => console.log('🎵 Loser sound is playing'));
+      this.loserAudio.addEventListener('error', (e) => console.error('🎵 Loser sound error:', e));
+
       this.isInitialized = true;
       console.log('🎵 Audio manager initialized');
     } catch (error) {
@@ -90,6 +96,7 @@ export class AudioManager {
     }
 
     try {
+      this.loserAudio.currentTime = 0; // Reset to beginning
       console.log('🎵 Playing loser sound...');
       await this.loserAudio.play();
       console.log('✅ Loser sound played successfully');
@@ -166,6 +173,9 @@ export class AudioManager {
     }
     if (this.winnerAudio) {
       this.winnerAudio.volume = 1.0;
+    }
+    if (this.loserAudio) {
+      this.loserAudio.volume = 1.0;
     }
     if (this.backgroundMusic) {
       this.backgroundMusic.volume = 1.0;
