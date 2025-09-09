@@ -7,16 +7,29 @@ const AudioControls: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [rouletteVolume, setRouletteVolume] = useState(60);
   const [winnerVolume, setWinnerVolume] = useState(70);
+  const [backgroundVolume, setBackgroundVolume] = useState(30);
+  const [backgroundMusicEnabled, setBackgroundMusicEnabled] = useState(true);
   const audioManager = useRef(getAudioManager());
 
   const handleRouletteVolumeChange = (volume: number) => {
     setRouletteVolume(volume);
-    audioManager.current.setVolume(volume / 100, winnerVolume / 100);
+    audioManager.current.setVolume(volume / 100, winnerVolume / 100, undefined, backgroundVolume / 100);
   };
 
   const handleWinnerVolumeChange = (volume: number) => {
     setWinnerVolume(volume);
-    audioManager.current.setVolume(rouletteVolume / 100, volume / 100);
+    audioManager.current.setVolume(rouletteVolume / 100, volume / 100, undefined, backgroundVolume / 100);
+  };
+
+  const handleBackgroundVolumeChange = (volume: number) => {
+    setBackgroundVolume(volume);
+    audioManager.current.setVolume(rouletteVolume / 100, winnerVolume / 100, undefined, volume / 100);
+  };
+
+  const toggleBackgroundMusic = () => {
+    const newEnabled = !backgroundMusicEnabled;
+    setBackgroundMusicEnabled(newEnabled);
+    audioManager.current.setBackgroundMusicEnabled(newEnabled);
   };
 
   const testRouletteSound = () => {
@@ -94,6 +107,33 @@ const AudioControls: React.FC = () => {
             className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
           />
           <div className="text-center text-white text-xs mt-1">{winnerVolume}%</div>
+        </div>
+
+        {/* Background Music Controls */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-white text-xs">Música de Fondo</label>
+            <button
+              onClick={toggleBackgroundMusic}
+              className={`px-2 py-1 rounded text-xs transition-colors font-bold ${
+                backgroundMusicEnabled 
+                  ? 'bg-green-500 hover:bg-green-600 text-white' 
+                  : 'bg-red-500 hover:bg-red-600 text-white'
+              }`}
+            >
+              {backgroundMusicEnabled ? '🎵 ON' : '🔇 OFF'}
+            </button>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={backgroundVolume}
+            onChange={(e) => handleBackgroundVolumeChange(Number(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            disabled={!backgroundMusicEnabled}
+          />
+          <div className="text-center text-white text-xs mt-1">{backgroundVolume}%</div>
         </div>
       </div>
 

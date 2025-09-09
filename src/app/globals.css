@@ -76,7 +76,7 @@ body {
 
 /* Spinning glow effect */
 .wheel-spinning {
-  animation: wheel-glow 4s ease-in-out;
+  animation: wheel-glow 4.5s ease-in-out;
 }
 
 @keyframes wheel-glow {
@@ -147,4 +147,26 @@ body {
 
 .casino-light:nth-child(4n) {
   animation-delay: 1.5s;
+}
+
+/* Smooth wheel rotation animation */
+@keyframes smooth-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(var(--target-rotation, 360deg));
+  }
+}
+
+/* Enhanced wheel container with smooth rotation */
+.wheel-smooth-rotation {
+  animation: smooth-spin 4.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  will-change: transform;
+}
+
+/* Improved transition for wheel elements */
+.wheel-element {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, filter;
 }

@@ -18,6 +18,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<SVGSVGElement>(null);
   const audioManager = useRef(getAudioManager());
+  const animationRef = useRef<number | null>(null);
 
   // Use provided colors or fallback to default colors
   const colors = propColors || [
@@ -36,6 +37,15 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
     }, 2000); // 2 seconds loading time
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
   }, []);
 
   // Function to verify which segment is at the pointer after rotation
@@ -258,9 +268,32 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           }))
         });
 
-        setRotation(finalRotation);
+        // Smooth animation using requestAnimationFrame
+        const startTime = Date.now();
+        const startRotation = rotation;
+        const duration = 4500; // 4.5 seconds
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Use easeOutQuart for smooth deceleration
+          const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+          const currentRotation = startRotation + (finalRotation - startRotation) * easeOutQuart;
+          
+          setRotation(currentRotation);
+          
+          if (progress < 1) {
+            animationRef.current = requestAnimationFrame(animate);
+          } else {
+            // Animation complete
+            setRotation(finalRotation);
+          }
+        };
+        
+        animationRef.current = requestAnimationFrame(animate);
 
-        // Trigger animation and callback
+        // Trigger callback after animation completes
         setTimeout(() => {
           // Verify the landing position
           const actualLandingIndex = verifyLandingSegment(finalRotation);
@@ -303,7 +336,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           console.log('🏆 Final prize to show (from API):', prizeToShow);
           onWin(prizeToShow, isPositive);
-        }, 4000);
+        }, 4500);
       } else {
         // Handle API error
         audioManager.current.stopRouletteSpinSound();
@@ -326,14 +359,37 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
       const winningIndex = Math.floor(pointerPosition / segmentAngle) % prizes.length;
       const winningPrize = prizes[winningIndex];
 
-      setRotation(finalRotation);
+      // Smooth animation for fallback case too
+      const startTime = Date.now();
+      const startRotation = rotation;
+      const duration = 4500;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easeOutQuart for smooth deceleration
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const currentRotation = startRotation + (finalRotation - startRotation) * easeOutQuart;
+        
+        setRotation(currentRotation);
+        
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          // Animation complete
+          setRotation(finalRotation);
+        }
+      };
+      
+      animationRef.current = requestAnimationFrame(animate);
       
       setTimeout(() => {
         setIsSpinning(false);
         // In fallback mode, assume it's positive and play winner sound
         audioManager.current.playWinnerSound();
         onWin(winningPrize, true);
-      }, 4000);
+      }, 4500);
     }
   };
 
@@ -442,8 +498,9 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
             className="max-w-full max-h-full"
             style={{
               transform: `rotate(${rotation}deg)`,
-              transition: isSpinning ? 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)' : 'none',
+              transition: 'none', // We handle animation with requestAnimationFrame
               filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.2))',
+              willChange: 'transform',
             }}
           >
           

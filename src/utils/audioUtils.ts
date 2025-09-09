@@ -4,7 +4,9 @@ export class AudioManager {
   private rouletteSpinAudio: HTMLAudioElement | null = null;
   private winnerAudio: HTMLAudioElement | null = null;
   private loserAudio: HTMLAudioElement | null = null;
+  private backgroundMusic: HTMLAudioElement | null = null;
   private isInitialized = false;
+  private backgroundMusicEnabled = true;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -18,16 +20,22 @@ export class AudioManager {
       this.rouletteSpinAudio = new Audio('/sounds/ruidoRuleta.mp3');
       this.winnerAudio = new Audio('/sounds/sonidoGanador.mp3');
       this.loserAudio = new Audio('/sounds/sonidoPerder.mp3');
+      this.backgroundMusic = new Audio('/sounds/musicaFondo.mp3');
 
       // Set initial volume
       this.rouletteSpinAudio.volume = 0.6;
       this.winnerAudio.volume = 0.7;
       this.loserAudio.volume = 0.7;
+      this.backgroundMusic.volume = 0.3; // Lower volume for background music
 
       // Preload the audio files
       this.rouletteSpinAudio.preload = 'auto';
       this.winnerAudio.preload = 'auto';
       this.loserAudio.preload = 'auto';
+      this.backgroundMusic.preload = 'auto';
+
+      // Configure background music for looping
+      this.backgroundMusic.loop = true;
 
       this.isInitialized = true;
     } catch (error) {
@@ -85,7 +93,49 @@ export class AudioManager {
     }
   }
 
-  public setVolume(rouletteVolume: number, winnerVolume: number, loserVolume?: number) {
+  // Background music controls
+  public async startBackgroundMusic() {
+    if (!this.backgroundMusic || !this.backgroundMusicEnabled) return;
+
+    try {
+      this.backgroundMusic.currentTime = 0;
+      console.log('🎵 Starting background music...');
+      await this.backgroundMusic.play();
+      console.log('✅ Background music started successfully');
+    } catch (error) {
+      console.error('❌ Error starting background music:', error);
+      // Auto-play might be blocked, we'll try again on first user interaction
+    }
+  }
+
+  public stopBackgroundMusic() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause();
+      this.backgroundMusic.currentTime = 0;
+      console.log('⏹️ Background music stopped');
+    }
+  }
+
+  public toggleBackgroundMusic() {
+    if (!this.backgroundMusic) return;
+
+    if (this.backgroundMusic.paused) {
+      this.startBackgroundMusic();
+    } else {
+      this.stopBackgroundMusic();
+    }
+  }
+
+  public setBackgroundMusicEnabled(enabled: boolean) {
+    this.backgroundMusicEnabled = enabled;
+    if (!enabled) {
+      this.stopBackgroundMusic();
+    } else {
+      this.startBackgroundMusic();
+    }
+  }
+
+  public setVolume(rouletteVolume: number, winnerVolume: number, loserVolume?: number, backgroundVolume?: number) {
     if (this.rouletteSpinAudio) {
       this.rouletteSpinAudio.volume = Math.max(0, Math.min(1, rouletteVolume));
     }
@@ -95,6 +145,17 @@ export class AudioManager {
     if (this.loserAudio && loserVolume !== undefined) {
       this.loserAudio.volume = Math.max(0, Math.min(1, loserVolume));
     }
+    if (this.backgroundMusic && backgroundVolume !== undefined) {
+      this.backgroundMusic.volume = Math.max(0, Math.min(1, backgroundVolume));
+    }
+  }
+
+  public getBackgroundMusicStatus() {
+    return {
+      isPlaying: this.backgroundMusic ? !this.backgroundMusic.paused : false,
+      isEnabled: this.backgroundMusicEnabled,
+      volume: this.backgroundMusic?.volume || 0
+    };
   }
 }
 

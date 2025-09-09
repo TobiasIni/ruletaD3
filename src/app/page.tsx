@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SpinWheel from '@/components/SpinWheel';
 import PrizeManager from '@/components/PrizeManager';
 import WinnerModal from '@/components/WinnerModal';
 import AudioControls from '@/components/AudioControls';
 import { Prize, WheelConfiguration } from '@/types';
 import { getWheelConfiguration } from '@/utils/api';
+import { getAudioManager } from '@/utils/audioUtils';
 
 export default function Home() {
   // Default prizes for fallback
@@ -28,6 +29,8 @@ export default function Home() {
   const [winner, setWinner] = useState<Prize | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showPrizeManager, setShowPrizeManager] = useState(false);
+  const audioManager = useRef(getAudioManager());
+  const [backgroundMusicStarted, setBackgroundMusicStarted] = useState(false);
 
   // Fetch wheel configuration from API
   useEffect(() => {
@@ -49,6 +52,50 @@ export default function Home() {
 
     fetchConfig();
   }, []);
+
+  // Start background music when component mounts
+  useEffect(() => {
+    const startBackgroundMusic = async () => {
+      if (!backgroundMusicStarted) {
+        try {
+          await audioManager.current.startBackgroundMusic();
+          setBackgroundMusicStarted(true);
+          console.log('🎵 Background music started automatically');
+        } catch (error) {
+          console.log('🔇 Background music will start on first user interaction');
+        }
+      }
+    };
+
+    startBackgroundMusic();
+  }, [backgroundMusicStarted]);
+
+  // Start background music on first user interaction (for browsers that block autoplay)
+  useEffect(() => {
+    const handleUserInteraction = async () => {
+      if (!backgroundMusicStarted) {
+        try {
+          await audioManager.current.startBackgroundMusic();
+          setBackgroundMusicStarted(true);
+          console.log('🎵 Background music started on user interaction');
+        } catch (error) {
+          console.error('Failed to start background music:', error);
+        }
+      }
+    };
+
+    // Add event listeners for user interactions
+    const events = ['click', 'touchstart', 'keydown'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [backgroundMusicStarted]);
 
   const handleWin = (prize: Prize, isPositive?: boolean) => {
     setWinner({...prize, positive: isPositive});
