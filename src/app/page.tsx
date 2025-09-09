@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SpinWheel from '@/components/SpinWheel';
 import PrizeManager from '@/components/PrizeManager';
 import AudioControls from '@/components/AudioControls';
 import { Prize, WheelConfiguration } from '@/types';
 import { getWheelConfiguration } from '@/utils/api';
+import { getAudioManager } from '@/utils/audioUtils';
 
 export default function Home() {
   // Default prizes for fallback
@@ -25,6 +26,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPrizeManager, setShowPrizeManager] = useState(false);
+  const audioManager = useRef(getAudioManager());
+  const [backgroundMusicStarted, setBackgroundMusicStarted] = useState(false);
 
   // Fetch wheel configuration from API
   useEffect(() => {
@@ -46,6 +49,69 @@ export default function Home() {
 
     fetchConfig();
   }, []);
+
+  // Start background music when component mounts
+  useEffect(() => {
+    const startBackgroundMusic = async () => {
+      try {
+        await audioManager.current.startBackgroundMusic();
+        setBackgroundMusicStarted(true);
+        console.log('🎵 Background music started automatically');
+      } catch (error) {
+        console.log('🔇 Background music blocked, trying alternative methods');
+        
+        // Try force start method
+        setTimeout(() => {
+          audioManager.current.forceStartBackgroundMusic();
+          setBackgroundMusicStarted(true);
+        }, 500);
+        
+        // Try again after a longer delay
+        setTimeout(async () => {
+          try {
+            await audioManager.current.startBackgroundMusic();
+            setBackgroundMusicStarted(true);
+            console.log('🎵 Background music started after delay');
+          } catch (retryError) {
+            console.log('🔇 Background music still blocked, waiting for user interaction');
+          }
+        }, 2000);
+      }
+    };
+
+    // Start immediately when component mounts
+    startBackgroundMusic();
+    
+    // Also try after a short delay to handle timing issues
+    setTimeout(startBackgroundMusic, 1000);
+  }, []); // Empty dependency array to run only once
+
+  // Start background music on first user interaction (for browsers that block autoplay)
+  useEffect(() => {
+    const handleUserInteraction = async () => {
+      if (!backgroundMusicStarted) {
+        try {
+          await audioManager.current.startBackgroundMusic();
+          setBackgroundMusicStarted(true);
+          console.log('🎵 Background music started on user interaction');
+        } catch (error) {
+          console.error('Failed to start background music:', error);
+        }
+      }
+    };
+
+    // Add event listeners for user interactions
+    const events = ['click', 'touchstart', 'keydown', 'mousemove'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [backgroundMusicStarted]);
 
   const handleWin = (prize: Prize, isPositive?: boolean) => {
     // This function is now handled by SpinWheel's internal modal
@@ -85,6 +151,20 @@ export default function Home() {
           colors={wheelConfig?.colors}
           logo={wheelConfig?.logo}
         />
+      </div>
+
+      {/* Temporary debug button for background music */}
+      <div className="absolute top-4 right-4 z-40">
+        <button
+          onClick={() => {
+            console.log('🎵 Manual start attempt');
+            audioManager.current.forceStartBackgroundMusic();
+            setBackgroundMusicStarted(true);
+          }}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg"
+        >
+          🎵
+        </button>
       </div>
 
     </div>

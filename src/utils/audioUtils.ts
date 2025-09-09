@@ -4,6 +4,7 @@ export class AudioManager {
   private rouletteSpinAudio: HTMLAudioElement | null = null;
   private winnerAudio: HTMLAudioElement | null = null;
   private loserAudio: HTMLAudioElement | null = null;
+  private backgroundMusic: HTMLAudioElement | null = null;
   private isInitialized = false;
 
   constructor() {
@@ -18,18 +19,31 @@ export class AudioManager {
       this.rouletteSpinAudio = new Audio('/sounds/ruidoRuleta.mp3');
       this.winnerAudio = new Audio('/sounds/sonidoGanador.mp3');
       this.loserAudio = new Audio('/sounds/sonidoPerder.mp3');
+      this.backgroundMusic = new Audio('/sounds/musicaFondo.mp3');
 
-      // Set initial volume
-      this.rouletteSpinAudio.volume = 0.6;
-      this.winnerAudio.volume = 0.7;
-      this.loserAudio.volume = 0.7;
+      // Set initial volume to 100% for all sounds
+      this.rouletteSpinAudio.volume = 1.0;
+      this.winnerAudio.volume = 1.0;
+      this.loserAudio.volume = 1.0;
+      this.backgroundMusic.volume = 1.0;
 
       // Preload the audio files
       this.rouletteSpinAudio.preload = 'auto';
       this.winnerAudio.preload = 'auto';
       this.loserAudio.preload = 'auto';
+      this.backgroundMusic.preload = 'auto';
+
+      // Set background music to loop
+      this.backgroundMusic.loop = true;
+
+      // Add event listeners for debugging
+      this.backgroundMusic.addEventListener('loadstart', () => console.log('🎵 Background music load started'));
+      this.backgroundMusic.addEventListener('canplay', () => console.log('🎵 Background music can play'));
+      this.backgroundMusic.addEventListener('playing', () => console.log('🎵 Background music is playing'));
+      this.backgroundMusic.addEventListener('error', (e) => console.error('🎵 Background music error:', e));
 
       this.isInitialized = true;
+      console.log('🎵 Audio manager initialized');
     } catch (error) {
       console.error('Error initializing audio:', error);
     }
@@ -85,15 +99,74 @@ export class AudioManager {
     }
   }
 
-  public setVolume(rouletteVolume: number, winnerVolume: number, loserVolume?: number) {
+  public async startBackgroundMusic() {
+    if (!this.isInitialized || !this.backgroundMusic) {
+      console.log('🔇 Audio not initialized or background music not available');
+      return;
+    }
+
+    try {
+      // Ensure the audio is ready
+      if (this.backgroundMusic.readyState < 2) {
+        console.log('🔇 Background music not ready, waiting...');
+        await new Promise((resolve) => {
+          this.backgroundMusic!.addEventListener('canplay', resolve, { once: true });
+        });
+      }
+
+      // Reset to beginning and play
+      this.backgroundMusic.currentTime = 0;
+      this.backgroundMusic.volume = 1.0; // Ensure volume is at 100%
+      this.backgroundMusic.loop = true; // Ensure loop is enabled
+      
+      const playPromise = this.backgroundMusic.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('🎵 Background music started successfully');
+      }
+    } catch (error) {
+      console.error('Error playing background music:', error);
+      throw error; // Re-throw to allow retry logic
+    }
+  }
+
+  public stopBackgroundMusic() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause();
+      this.backgroundMusic.currentTime = 0;
+      console.log('🔇 Background music stopped');
+    }
+  }
+
+  public forceStartBackgroundMusic() {
+    if (!this.backgroundMusic) return;
+    
+    try {
+      this.backgroundMusic.currentTime = 0;
+      this.backgroundMusic.volume = 1.0;
+      this.backgroundMusic.loop = true;
+      this.backgroundMusic.play().catch(error => {
+        console.log('🔇 Force start failed:', error);
+      });
+    } catch (error) {
+      console.error('Error in force start:', error);
+    }
+  }
+
+  public setVolume(rouletteVolume: number, winnerVolume: number, loserVolume?: number, backgroundVolume?: number) {
+    // All volumes are set to 100% by default, this method is kept for compatibility
     if (this.rouletteSpinAudio) {
-      this.rouletteSpinAudio.volume = Math.max(0, Math.min(1, rouletteVolume));
+      this.rouletteSpinAudio.volume = 1.0;
     }
     if (this.winnerAudio) {
-      this.winnerAudio.volume = Math.max(0, Math.min(1, winnerVolume));
+      this.winnerAudio.volume = 1.0;
     }
-    if (this.loserAudio && loserVolume !== undefined) {
-      this.loserAudio.volume = Math.max(0, Math.min(1, loserVolume));
+    if (this.loserAudio) {
+      this.loserAudio.volume = 1.0;
+    }
+    if (this.backgroundMusic) {
+      this.backgroundMusic.volume = 1.0;
     }
   }
 }
