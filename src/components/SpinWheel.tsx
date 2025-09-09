@@ -210,11 +210,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
     try {
       const result = await Promise.race([apiCall, timeoutPromise]);
       
-      if (result && result.exito) {
+      if (result && typeof result === 'object' && 'exito' in result && result.exito && 'premio_ganado' in result) {
         console.log('🎲 API Spin Response received:', result);
         
         // Find the exact matching prize and its index
-        const { index: winningIndex, prize: winningPrize } = findPrizeByApiResponse(prizes, result.premio_ganado);
+        const { index: winningIndex, prize: winningPrize } = findPrizeByApiResponse(prizes, result.premio_ganado as any);
         
         console.log('🎯 API determined winner:', winningIndex, 'Prize:', winningPrize.text);
         
@@ -246,7 +246,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           audioManager.current.stopRouletteSpinSound();
           setIsSpinning(false);
           
-          const isPositive = result.premio_ganado.positive;
+          const isPositive = (result.premio_ganado as any).positive;
           console.log('🎵 Playing sound for positive:', isPositive);
           
           if (isPositive) {
@@ -256,10 +256,10 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           }
           
           const prizeToShow: Prize = {
-            id: result.premio_ganado.id.toString(),
-            text: result.premio_ganado.nombre,
+            id: (result.premio_ganado as any).id.toString(),
+            text: (result.premio_ganado as any).nombre,
             color: winningPrize.color,
-            probability: result.premio_ganado.probabilidad,
+            probability: (result.premio_ganado as any).probabilidad,
             positive: isPositive
           };
           
