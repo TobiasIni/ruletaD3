@@ -189,105 +189,64 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
 
     setIsSpinning(true);
 
-    // Start playing the roulette spin sound
+    // Start playing the roulette spin sound immediately
     audioManager.current.playRouletteSpinSound();
 
+    // Start the wheel spinning immediately with a random rotation
+    const minRotation = 3600; // 10 full rotations minimum
+    const randomExtraRotation = Math.floor(Math.random() * 10) * 360;
+    const immediateRotation = rotation + minRotation + randomExtraRotation;
+    setRotation(immediateRotation);
+
+    // Start the API call in parallel (non-blocking)
+    const apiCall = spinRoulette().catch(error => {
+      console.error('API call failed:', error);
+      return null; // Return null to indicate failure
+    });
+
+    // Wait for either the API response or a timeout (whichever comes first)
+    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000)); // 3 second timeout
+    
     try {
-      // Call the API to get the winning prize
-      const spinResponse = await spinRoulette();
+      const result = await Promise.race([apiCall, timeoutPromise]);
       
-      if (spinResponse.exito) {
-        console.log('🎲 API Spin Response:', spinResponse);
+      if (result && result.exito) {
+        console.log('🎲 API Spin Response received:', result);
         
         // Find the exact matching prize and its index
-        const { index: winningIndex, prize: winningPrize } = findPrizeByApiResponse(prizes, spinResponse.premio_ganado);
+        const { index: winningIndex, prize: winningPrize } = findPrizeByApiResponse(prizes, result.premio_ganado);
         
-        // TEMPORARY TEST: Force to specific index to test rotation
-        console.log('🧪 TEST: Original winning index:', winningIndex, 'Prize:', winningPrize.text);
-        console.log('🧪 TEST: API Prize ID:', spinResponse.premio_ganado.id, 'Name:', spinResponse.premio_ganado.nombre);
+        console.log('🎯 API determined winner:', winningIndex, 'Prize:', winningPrize.text);
         
-        // COORDINATE SYSTEM CLARIFICATION:
-        // - Standard math coordinates: 0° = right, 90° = bottom, 180° = left, 270° = top
-        // - Pointer is at the TOP (270° in math coordinates)
-        // - Segments use standard math coordinates for positioning
-        
-        // Calculate the center angle of the winning segment (in math coordinates)
+        // Calculate the precise rotation to land on the winning segment
         const segmentCenterAngle = (winningIndex * segmentAngle) + (segmentAngle / 2);
-        
-        // CRITICAL: Account for current wheel position
-        // The wheel is currently at `rotation` degrees, so segments are offset by that amount
-        const currentNormalizedRotation = ((rotation % 360) + 360) % 360;
-        
-        // Current position of the winning segment center after existing rotation
+        const currentNormalizedRotation = ((immediateRotation % 360) + 360) % 360;
         const currentSegmentPosition = (segmentCenterAngle + currentNormalizedRotation) % 360;
         
-        // Calculate how much more rotation is needed to align with pointer at 270°
         let additionalRotation = 270 - currentSegmentPosition;
-        
-        // Normalize to positive rotation for visual effect
         while (additionalRotation <= 0) {
           additionalRotation += 360;
         }
         
-        // Add multiple full rotations for visual effect (minimum 10 full rotations)
-        const minRotation = 3600; // 10 full rotations
-        // NOTE: Random extra rotation can misalign the final position!
-        // We need to ensure the final position still lands exactly where intended
-        const randomExtraRotation = Math.floor(Math.random() * 10) * 360; // Only full rotations to maintain alignment
-        const finalRotation = rotation + minRotation + additionalRotation + randomExtraRotation;
+        // Adjust the rotation to land on the correct segment
+        const finalRotation = immediateRotation + additionalRotation;
+        setRotation(finalRotation);
 
-        console.log('🎯 Rotation calculation:', {
+        console.log('🎯 Final rotation calculated for API winner:', {
           winningIndex,
           segmentCenterAngle,
-          currentNormalizedRotation,
           currentSegmentPosition,
           additionalRotation,
           finalRotation: finalRotation % 360,
-          minRotation,
-          randomExtraRotation,
-          totalPrizes: prizes.length,
-          expectedPrize: winningPrize.text,
-          segmentAngleDegrees: segmentAngle,
-          pointerPosition: 270, // degrees
-          calculationCheck: {
-            segmentCenter: segmentCenterAngle,
-            currentSegmentPos: currentSegmentPosition,
-            afterAdditionalRotation: (currentSegmentPosition + additionalRotation) % 360,
-            shouldBe270: Math.abs((currentSegmentPosition + additionalRotation) % 360 - 270) < 1
-          },
-          allSegmentCenters: prizes.map((_, i) => ({
-            index: i,
-            centerAngle: (i * segmentAngle) + (segmentAngle / 2),
-            text: prizes[i]?.text
-          }))
+          expectedPrize: winningPrize.text
         });
 
-        setRotation(finalRotation);
-
-        // Trigger animation and callback
+        // Wait for the wheel to stop and show the result
         setTimeout(() => {
-          // Verify the landing position
-          const actualLandingIndex = verifyLandingSegment(finalRotation);
-          const actualLandingPrize = prizes[actualLandingIndex];
-          
-          // Check if we landed where we intended
-          if (actualLandingIndex !== winningIndex) {
-            console.warn('⚠️ Landing mismatch!', {
-              intended: winningIndex,
-              actual: actualLandingIndex,
-              intendedPrize: winningPrize.text,
-              actualPrize: actualLandingPrize?.text
-            });
-          } else {
-            console.log('✅ Perfect landing! Prize matches expectation.');
-          }
-          
-          // Stop the spinning sound when the wheel stops
           audioManager.current.stopRouletteSpinSound();
           setIsSpinning(false);
           
-          // Play appropriate sound and show effects based on positive field
-          const isPositive = spinResponse.premio_ganado.positive;
+          const isPositive = result.premio_ganado.positive;
           console.log('🎵 Playing sound for positive:', isPositive);
           
           if (isPositive) {
@@ -296,53 +255,66 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
             audioManager.current.playLoserSound();
           }
           
-          // Always use the API prize data for absolute accuracy
           const prizeToShow: Prize = {
-            id: spinResponse.premio_ganado.id.toString(),
-            text: spinResponse.premio_ganado.nombre,
-            color: winningPrize.color, // Keep the visual color
-            probability: spinResponse.premio_ganado.probabilidad,
+            id: result.premio_ganado.id.toString(),
+            text: result.premio_ganado.nombre,
+            color: winningPrize.color,
+            probability: result.premio_ganado.probabilidad,
             positive: isPositive
           };
           
-          console.log('🏆 Final prize to show (from API):', prizeToShow);
+          console.log('🏆 Showing API prize:', prizeToShow);
           setWinner(prizeToShow);
           setShowModal(true);
           onWin(prizeToShow, isPositive);
         }, 4000);
+        
       } else {
-        // Handle API error
-        audioManager.current.stopRouletteSpinSound();
-        setIsSpinning(false);
-        console.error('Spin API returned error:', spinResponse.mensaje);
+        // API failed or timed out - use fallback
+        console.log('⚠️ API failed or timed out, using fallback');
+        handleFallbackSpin(immediateRotation);
       }
     } catch (error) {
-      // Handle network or other errors
-      console.error('Error spinning wheel:', error);
+      console.error('Error in spin process:', error);
+      handleFallbackSpin(immediateRotation);
+    }
+  };
+
+  // Fallback function for when API fails
+  const handleFallbackSpin = (currentRotation: number) => {
+    // Calculate a random winning segment
+    const randomIndex = Math.floor(Math.random() * prizes.length);
+    const winningPrize = prizes[randomIndex];
+    
+    // Calculate rotation to land on this random segment
+    const segmentCenterAngle = (randomIndex * segmentAngle) + (segmentAngle / 2);
+    const currentNormalizedRotation = ((currentRotation % 360) + 360) % 360;
+    const currentSegmentPosition = (segmentCenterAngle + currentNormalizedRotation) % 360;
+    
+    let additionalRotation = 270 - currentSegmentPosition;
+    while (additionalRotation <= 0) {
+      additionalRotation += 360;
+    }
+    
+    const finalRotation = currentRotation + additionalRotation;
+    setRotation(finalRotation);
+
+    console.log('🎲 Fallback spin - random winner:', {
+      randomIndex,
+      winningPrize: winningPrize.text,
+      finalRotation: finalRotation % 360
+    });
+
+    setTimeout(() => {
       audioManager.current.stopRouletteSpinSound();
       setIsSpinning(false);
       
-      // Fallback to random spin if API fails
-      const minRotation = 3600;
-      const randomRotation = Math.random() * 360;
-      const finalRotation = rotation + minRotation + randomRotation;
-      
-      const normalizedRotation = (finalRotation % 360);
-      const pointerPosition = (270 - normalizedRotation + 360) % 360;
-      const winningIndex = Math.floor(pointerPosition / segmentAngle) % prizes.length;
-      const winningPrize = prizes[winningIndex];
-
-      setRotation(finalRotation);
-      
-      setTimeout(() => {
-        setIsSpinning(false);
-        // In fallback mode, assume it's positive and play winner sound
-        audioManager.current.playWinnerSound();
-        setWinner(winningPrize);
-        setShowModal(true);
-        onWin(winningPrize, true);
-      }, 4000);
-    }
+      // In fallback mode, assume it's positive and play winner sound
+      audioManager.current.playWinnerSound();
+      setWinner(winningPrize);
+      setShowModal(true);
+      onWin(winningPrize, true);
+    }, 4000);
   };
 
   // Function to close modal with animation delay
@@ -411,22 +383,22 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-1">
+    <div className="flex flex-col h-full w-full px-0">
       {/* Company Logo at the top - Optimized for 1080x1920 */}
-      <div className="mb-2 sm:mb-3 flex justify-center">
+      <div className="absolute -top-32 left-0 right-0 h-[35vh] flex items-center justify-center z-30">
         <img 
           src={logo || "/images/d3.jpg"} 
           alt="Logo de la empresa" 
-          className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain" 
+          className="w-full h-full max-w-[35vh] max-h-[35vh] object-contain" 
         />
       </div>
 
       {/* Ambient glow effect */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
+        <div className="w-92 h-92 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-gradient-radial from-yellow-500/20 via-yellow-600/10 to-transparent blur-3xl opacity-60 animate-pulse"></div>
       </div>
       
-      <div className={`relative wheel-container flex-1 flex items-center justify-center z-10 ${isSpinning ? 'wheel-spinning' : ''}`}>
+      <div className={`absolute inset-0 wheel-container flex items-center justify-center z-10 ${isSpinning ? 'wheel-spinning' : ''}`}>
         {/* Enhanced wheel container with floating effect */}
         <div className="relative transform transition-all duration-300"
           style={{
@@ -462,8 +434,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           <svg
             ref={wheelRef}
-            width="min(75vw, 60vh, 500px)"
-            height="min(75vw, 60vh, 500px)"
+            width="min(100vw, 98vh, 900px)"
+            height="min(100vw, 98vh, 900px)"
             viewBox="0 0 400 400"
             className="max-w-full max-h-full"
             style={{
@@ -623,7 +595,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           </svg>
 
           {/* Ultra elegant center logo with advanced effects */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full z-10 flex items-center justify-center">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full z-10 flex items-center justify-center">
             {/* Multiple shadow layers for depth */}
             
             {/* Main logo container */}
@@ -656,12 +628,12 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
       </div>
 
       {/* Elegant casino spin button */}
-      <div className="w-full px-2 pb-2">
+      <div className="absolute bottom-0 left-0 right-0 w-full px-4 pb-10 z-20">
         <button
           onClick={spinWheel}
           disabled={isSpinning || prizes.length === 0}
           className={`
-            w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-bold text-base sm:text-lg
+            w-full py-6 sm:py-8 px-4 sm:px-6 rounded-lg font-bold text-lg sm:text-xl
             transform transition-all duration-200 ease-in-out relative overflow-hidden
             ${isSpinning || prizes.length === 0 
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-60' 
@@ -688,7 +660,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ prizes, onWin, colors: propColors
           
           <span className="flex items-center justify-center space-x-2 sm:space-x-3 relative z-10">
        
-            <span className="text-base sm:text-lg font-share-tech tracking-wider">
+            <span className="text-2xl sm:text-3xl font-share-tech tracking-wider">
               {isSpinning ? 'Probando suerte...' : 'GIRAR'}
             </span>
           </span>
